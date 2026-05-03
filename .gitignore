@@ -1,0 +1,26 @@
+ 
+# ambiente virtual
+venv/
+.venv/
+env/
+
+# cache do python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# cache do pytest
+.pytest_cache/
+
+# arquivos de ambiente e segredos
+.env
+.env.*
+
+# pasta de uploads temporarios
+uploads/
+
+# sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
