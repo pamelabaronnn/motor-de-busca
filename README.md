@@ -30,7 +30,7 @@ Cada algoritmo é uma classe independente com o metodo `buscar(texto, padrao)`. 
 
 
 ```bash
-git clone <seu-repositorio>
+git clone https://github.com/pamelabaronnn/motor-de-busca
 python -m venv venv     - cria o ambiente virtual
 venv\script\activate     - executa o ambiente virtual
 pip install -r requirements.txt  - (caso vá rodar sem docker)
