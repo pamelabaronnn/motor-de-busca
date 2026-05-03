@@ -1,0 +1,78 @@
+{
+  "title": "Motor de Busca - Observabilidade",
+  "uid": "motor-de-busca",
+  "schemaVersion": 36,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Tempo medio de busca por algoritmo (ms)",
+      "type": "bargauge",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(search_duration_ms_sum[5m]) / rate(search_duration_ms_count[5m])",
+          "legendFormat": "{{algorithm}}"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Total de buscas por algoritmo",
+      "type": "piechart",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (algorithm) (search_requests_total)",
+          "legendFormat": "{{algorithm}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Buscas ao longo do tempo",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(search_requests_total[1m])",
+          "legendFormat": "{{algorithm}} - {{found}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Tamanho medio dos documentos processados",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 5 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(document_size_chars_sum[5m]) / rate(document_size_chars_count[5m])",
+          "legendFormat": "{{algorithm}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Taxa de encontrados vs nao encontrados",
+      "type": "piechart",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 5 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum by (found) (search_requests_total)",
+          "legendFormat": "encontrado={{found}}"
+        }
+      ]
+    }
+  ],
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s"
+}

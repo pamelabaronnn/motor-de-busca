@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motor de Busca em Documentos</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f1117;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #7c3aed;
+            margin-bottom: 0.4rem;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background: #1e2130;
+            border: 1px solid #2d3148;
+            border-radius: 12px;
+            padding: 1.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            color: #a78bfa;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 0.4rem;
+        }
+
+        input[type="file"],
+        select,
+        input[type="text"] {
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            background: #0f1117;
+            border: 1px solid #2d3148;
+            border-radius: 8px;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            margin-bottom: 1.2rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="file"]:hover,
+        select:hover,
+        input[type="text"]:focus {
+            border-color: #7c3aed;
+        }
+
+        select option { background: #1e2130; }
+
+        button {
+            width: 100%;
+            padding: 0.85rem;
+            background: #7c3aed;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, opacity 0.2s;
+        }
+
+        button:hover { background: #6d28d9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* area de resultados */
+        #area-resultado { display: none; }
+
+        .grid-metricas {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .metrica {
+            background: #0f1117;
+            border: 1px solid #2d3148;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metrica .valor {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #a78bfa;
+        }
+
+        .metrica .rotulo {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+        }
+
+        .badge-encontrado {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .badge-sim { background: #14532d; color: #4ade80; }
+        .badge-nao { background: #450a0a; color: #f87171; }
+
+        .posicoes-wrapper {
+            background: #0f1117;
+            border: 1px solid #2d3148;
+            border-radius: 8px;
+            padding: 0.9rem;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .posicoes-wrapper p {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.8;
+            word-break: break-all;
+        }
+
+        .aviso-mais {
+            font-size: 0.8rem;
+            color: #f59e0b;
+            margin-top: 0.5rem;
+        }
+
+        .erro-box {
+            background: #450a0a;
+            border: 1px solid #7f1d1d;
+            border-radius: 8px;
+            padding: 1rem;
+            color: #fca5a5;
+            font-size: 0.9rem;
+        }
+
+        .spinner {
+            display: none;
+            text-align: center;
+            color: #7c3aed;
+            font-size: 0.9rem;
+            padding: 0.5rem;
+        }
+
+        .spinner.ativo { display: block; }
+
+        /* algoritmo selecionado destaque */
+        .algo-info {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: -0.8rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .complexidade { color: #a78bfa; }
+
+        @media (max-width: 600px) {
+            .grid-metricas { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>Motor de Busca</h1>
+        <p>pesquisa de palavras e trechos em documentos de texto</p>
+    </header>
+
+    <!-- upload do arquivo -->
+    <div class="card">
+        <h2>1 - Documento</h2>
+        <label for="arquivo">
+            selecione um arquivo
+            {% if suporte_pdf %}.txt ou .pdf{% else %}.txt{% endif %}
+        </label>
+        <input type="file" id="arquivo"
+               accept=".txt{% if suporte_pdf %},.pdf{% endif %}"
+               onchange="mostrar_nome_arquivo(this)">
+    </div>
+
+    <!-- selecao do algoritmo -->
+    <div class="card">
+        <h2>2 - Algoritmo de Busca</h2>
+        <label for="algoritmo">escolha o algoritmo</label>
+        <select id="algoritmo" onchange="atualizar_info_algoritmo(this)">
+            {% for algo in algoritmos %}
+            <option value="{{ algo }}">{{ algo | replace('-', ' ') | title }}</option>
+            {% endfor %}
+        </select>
+        <p class="algo-info" id="info-algoritmo"></p>
+    </div>
+
+    <!-- campo de busca -->
+    <div class="card">
+        <h2>3 - Termo ou Trecho</h2>
+        <label for="padrao">o que voce quer buscar</label>
+        <input type="text" id="padrao" placeholder="ex - amor, no princípio era o verbo, etc">
+        <div class="spinner" id="spinner">buscando...</div>
+        <button id="btn-buscar" onclick="executar_busca()">Pesquisar</button>
+    </div>
+
+    <!-- area de resultados -->
+    <div class="card" id="area-resultado">
+        <h2>Resultados</h2>
+        <div id="conteudo-resultado"></div>
+    </div>
+
+</div>
+
+<script>
+    const infos_algoritmos = {
+        "forca-bruta": "O(N*M) no pior caso - compara caractere por caractere em cada posicao",
+        "rabin-karp": "O(N+M) no caso medio - usa hash rolante pra comparar janelas do texto",
+        "kmp": "O(N+M) garantido - tabela de falhas evita comparacoes redundantes",
+        "boyer-moore": "O(N/M) no melhor caso - compara de tras pra frente e pula varios chars"
+    }
+
+    function atualizar_info_algoritmo(select) {
+        const info = document.getElementById("info-algoritmo")
+        const algo = select.value
+        info.innerHTML = `<span class="complexidade">${infos_algoritmos[algo] || ""}</span>`
+    }
+
+    function mostrar_nome_arquivo(input) {
+        // apenas feedback visual pra confirmar que o arquivo foi selecionado
+        if (input.files.length > 0) {
+            const tamanho_kb = (input.files[0].size / 1024).toFixed(1)
+            input.title = `${input.files[0].name} - ${tamanho_kb} KB`
+        }
+    }
+
+    async function executar_busca() {
+        const arquivo = document.getElementById("arquivo").files[0]
+        const padrao = document.getElementById("padrao").value.trim()
+        const algoritmo = document.getElementById("algoritmo").value
+        const area = document.getElementById("area-resultado")
+        const conteudo = document.getElementById("conteudo-resultado")
+        const btn = document.getElementById("btn-buscar")
+        const spinner = document.getElementById("spinner")
+
+        if (!arquivo) {
+            alert("selecione um arquivo antes de pesquisar")
+            return
+        }
+
+        if (!padrao) {
+            alert("digite um termo para buscar")
+            return
+        }
+
+        btn.disabled = true
+        spinner.classList.add("ativo")
+        area.style.display = "none"
+
+        const form = new FormData()
+        form.append("arquivo", arquivo)
+        form.append("padrao", padrao)
+        form.append("algoritmo", algoritmo)
+
+        try {
+            const resp = await fetch("/buscar", { method: "POST", body: form })
+            const dados = await resp.json()
+
+            area.style.display = "block"
+
+            if (dados.erro) {
+                conteudo.innerHTML = `<div class="erro-box">${dados.erro}</div>`
+                return
+            }
+
+            const badge = dados.encontrado
+                ? `<span class="badge-encontrado badge-sim">encontrado</span>`
+                : `<span class="badge-encontrado badge-nao">nao encontrado</span>`
+
+            const posicoes_txt = dados.posicoes.length > 0
+                ? dados.posicoes.join(", ")
+                : "nenhuma"
+
+            const aviso_mais = dados.tem_mais_posicoes
+                ? `<p class="aviso-mais">exibindo as primeiras 100 de ${dados.ocorrencias} ocorrencias</p>`
+                : ""
+
+            conteudo.innerHTML = `
+                ${badge}
+                <div class="grid-metricas">
+                    <div class="metrica">
+                        <div class="valor">${dados.ocorrencias}</div>
+                        <div class="rotulo">ocorrencias</div>
+                    </div>
+                    <div class="metrica">
+                        <div class="valor">${dados.tempo_ms} ms</div>
+                        <div class="rotulo">tempo de execucao</div>
+                    </div>
+                    <div class="metrica">
+                        <div class="valor">${dados.n}</div>
+                        <div class="rotulo">N - tamanho do texto</div>
+                    </div>
+                    <div class="metrica">
+                        <div class="valor">${dados.m}</div>
+                        <div class="rotulo">M - tamanho do padrao</div>
+                    </div>
+                    <div class="metrica">
+                        <div class="valor">${dados.algoritmo.replace(/-/g,' ')}</div>
+                        <div class="rotulo">algoritmo usado</div>
+                    </div>
+                </div>
+                <label>posicoes encontradas (indices no texto)</label>
+                <div class="posicoes-wrapper">
+                    <p>${posicoes_txt}</p>
+                </div>
+                ${aviso_mais}
+            `
+        } catch (e) {
+            area.style.display = "block"
+            conteudo.innerHTML = `<div class="erro-box">erro de comunicacao com o servidor - ${e.message}</div>`
+        } finally {
+            btn.disabled = false
+            spinner.classList.remove("ativo")
+        }
+    }
+
+    // inicializa a info do algoritmo no carregamento
+    document.addEventListener("DOMContentLoaded", () => {
+        const sel = document.getElementById("algoritmo")
+        atualizar_info_algoritmo(sel)
+
+        // permite buscar com enter no campo de texto
+        document.getElementById("padrao").addEventListener("keydown", e => {
+            if (e.key === "Enter") executar_busca()
+        })
+    })
+</script>
+</body>
+</html>
